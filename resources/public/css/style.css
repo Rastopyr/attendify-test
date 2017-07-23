@@ -1,3 +1,18 @@
+
+body .container {
+  padding: 40px;
+  font-family: Helvetica;
+}
+
+.row {
+  margin-bottom: 10px;
+}
+
+.row div {
+  display: inline-block;
+  margin-right: 2px
+}
+
 h1 {
   text-decoration: underline;
 }

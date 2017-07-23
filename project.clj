@@ -16,7 +16,8 @@
                  [com.stuartsierra/component "0.3.2"]
                  [org.danielsz/system "0.4.0"]
                  [org.clojure/tools.namespace "0.2.11"]
-                 [rum "0.10.8"]]
+                 [rum "0.10.8"]
+                 [testdouble/clojurescript.csv "0.2.0"]]
 
   :plugins [[lein-cljsbuild "1.1.5"]
             [lein-environ "1.1.0"]]
