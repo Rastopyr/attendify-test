@@ -14,13 +14,12 @@
 ;resources and adapt to this task
 
 (defn read-csv [data & options]
-  (mapv #(str/split % #",")
-       (str/split data #"\n")))
+  (doall (mapv #(str/split % #",")
+          (str/split-lines data))))
 
 (defn isValidStructure? [body]
-  (let [labels (drop 1 body)]
-    (when (and)
-         (= ["Company", "Income"] labels) true)))
+  (let [labels (apply vec (take 1 body))]
+    (when (= ["Company", "Income"] labels) true)))
 
 (defn isValidSize? [file]
   (if (< (-> file .-size) (get @app-state :maxFileSize))
@@ -42,7 +41,6 @@
                     (process-upload body)
                     (setError "File is not valid csv")))]
     (aset reader "onload" onload)
-    (.log js/console file)
     (if (and file (isValidSize? file))
       (.readAsText reader file)
       (setError "File is too big"))))
@@ -137,7 +135,7 @@
     (when (> (count (rum/react data)) 0)
       [:div { :class "table-container"}
         [:div [:h2 "Table"]]
-        [:div "row-container"
+        [:div { :class "row-container"}
           (map-indexed rowView (rum/react data))
           (aggregationView 1)
           (saveButton)]])))
