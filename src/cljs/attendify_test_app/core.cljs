@@ -3,10 +3,12 @@
             [rum.core :as rum]
             [testdouble.cljs.csv :as csv]))
 
-; (enable-console-print!)
+(enable-console-print!)
 
-(defonce app-state (atom {:labels []
-                          :data []}))
+(defonce app-state (atom {:maxFileSize 1024
+                          :columns 2
+                          :data []
+                          :error nil}))
 
 ; `read-csv` and `handle-file-change` taken form StakOverflow or similar
 ;resources and adapt to this task
@@ -15,32 +17,63 @@
   (mapv #(str/split % #",")
        (str/split data #"\n")))
 
+(defn isValidStructure? [body]
+  (let [labels (drop 1 body)]
+    (when (and)
+         (= ["Company", "Income"] labels) true)))
+
+(defn isValidSize? [file]
+  (if (< (-> file .-size) (get @app-state :maxFileSize))
+    true))
+
+(defn setError [err]
+  (let [errors (get @app-state :errors)]
+    (swap! app-state assoc :error err)))
+
 (defn process-upload [fileData]
-  (let [parsed (read-csv fileData)]
-    (swap! app-state assoc :labels (apply vec (take 1 parsed)))
-    (swap! app-state assoc :data (vec (drop 1 parsed)))))
+  (swap! app-state assoc :data fileData :error nil)
+  (setError nil))
 
 (defn handle-file-change [ev]
   (let [file (nth (-> ev .-target .-files array-seq) 0)
         reader (js/FileReader.)
-        onload #(process-upload (-> % .-target .-result))]
+        onload #(let [body (read-csv (-> % .-target .-result))]
+                  (if (isValidStructure? body)
+                    (process-upload body)
+                    (setError "File is not valid csv")))]
     (aset reader "onload" onload)
-    (when file
-      (.readAsText reader file))))
+    (.log js/console file)
+    (if (and file (isValidSize? file))
+      (.readAsText reader file)
+      (setError "File is too big"))))
+
+(defn exportCsv []
+  (let [data (get @app-state :data)]
+    (->>
+      (csv/write-csv data)
+      (str "data:text/csv;charset=utf-8,")
+      (js/encodeURI)
+      (js/open))))
+
+(rum/defc saveButton
+  "
+    Export data from browser
+  "
+  []
+  [:button {:onClick #(exportCsv)} "Export data"])
 
 (rum/defc aggregationView
   "
     Aggregation results
   "
   [incomeIndex]
-  (let [values (map #(js/Number (nth % incomeIndex)) (get @app-state :data))
+  (let [data (map #(js/Number (nth % incomeIndex)) (get @app-state :data))
+        values (drop 1 data)
         sum (apply + values)
         avg (/ sum (count values))]
     [:div
       [:div (str "Sum:" sum)]
       [:div (str "Avg:" avg)]]))
-
-
 
 (rum/defc uploadInput
   "
@@ -52,6 +85,19 @@
              :type "file"
              :accept ".csv"
              :on-change handle-file-change}]])
+
+(rum/defc errorLine
+  ""
+  [err]
+  [:li err])
+
+(rum/defc errorsView < rum/reactive
+  "List of errors
+  "
+  []
+  (let [error (rum/cursor-in app-state [:error])]
+    (when error
+      [:div {:class "err"} (str (rum/react error))])))
 
 (rum/defc inputView < rum/reactive
   "
@@ -68,7 +114,7 @@
     Wrapper of input. Create cursor to
   "
   [labelIndex rowIndex]
-  [:div { :class "row"}
+  [:div { :class "column"}
     (inputView (rum/cursor-in app-state [:data rowIndex labelIndex]))])
 
 (rum/defc rowView
@@ -77,9 +123,9 @@
     Render count of columns equal of labels count
   "
   [index row]
-  [:div {:class "row" :key index }
-    (let [labels (get @app-state :labels)]
-      (map-indexed #(inputWrapper %1 index) labels))])
+  [:div {:class "row" :key index}
+    (let [columns (range (get @app-state :columns))]
+      (map-indexed #(inputWrapper %1 index) columns))])
 
 (rum/defc tableView < rum/reactive
   "
@@ -89,10 +135,12 @@
   []
   (let [data (rum/cursor-in app-state [:data])]
     (when (> (count (rum/react data)) 0)
-      [:div
+      [:div { :class "table-container"}
         [:div [:h2 "Table"]]
-        (map-indexed rowView (rum/react data))
-        (aggregationView 1)])))
+        [:div "row-container"
+          (map-indexed rowView (rum/react data))
+          (aggregationView 1)
+          (saveButton)]])))
 
 (rum/defc container
   "
@@ -102,7 +150,8 @@
   [:div {:class "container"}
    (uploadInput)
    [:div {:class "table-wrapper"}
-    (tableView)]])
+    (tableView)
+    (errorsView)]])
 
 (defn render []
   (rum/mount (container) (. js/document (getElementById "app"))))

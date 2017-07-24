@@ -1,5 +1,13 @@
 # attendify-test-app
 
+## Comments from aspirant
+
+1. i'm not sure, that i correct use `rum/cursor`.
+2. in task i should find average value. but this is ambiguous description.
+i implement show average of sum of values. but not sure that is correct
+3. Export could be implement with custom filename but i'm lazy :)
+4. i don't know how to push in vec with `swap!`
+
 
 ## Development
 
