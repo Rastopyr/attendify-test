@@ -1,6 +1,6 @@
 # attendify-test-app
 
-## Comments from aspirant
+## Comments from applicant
 
 1. i'm not sure, that i correct use `rum/cursor`.
 2. in task i should find average value. but this is ambiguous description.
